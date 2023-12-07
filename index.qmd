@@ -56,8 +56,10 @@ def server(input, output, session):
 app = App(app_ui, server)
 ```
 
-Traditional Shiny apps are _bifurcated_ in that they require you explicitly define a UI object and a server funciton. 
-By contrast, Shiny Express allows you to intermingle ui and server code.
+Traditional Shiny apps are _structured_ in that they require you explicitly define a UI object and a server funciton. 
+This structure makes them easy to extend and maintain but requires you to understand that structure to get off the ground.
+
+By contrast, Shiny Express doesn't require that you use a particular structure but instead allows you to intermingle ui and server code.
 Not only is there significantly less code in the Express version, but there are fewer concepts to (mis)understand or be intimidated by.
 Shiny Express is able to accomplish this because it makes a number of things implicit which are usually defined explictly in Shiny Apps. 
 In particular:
@@ -104,7 +106,7 @@ def plot():
     plt.hist(data, bins=input.num_bins())
 ```
 
-Contrast the Express code above with the full featured Shiny equivalent below:
+Contrast the Express code above with the full structured equivalent below:
 
 ```{shinylive-python}
 #| standalone: true
@@ -135,7 +137,7 @@ app = App(app_ui, server)
 
 Some things to notice:
 
-- In a bifurcated app, we first used the page-level component `ui.page_sidebar()` with a `ui.sidebar()` nested inside.
+- In a structured app, we first used the page-level component `ui.page_sidebar()` with a `ui.sidebar()` nested inside.
 - In the Express app, we created a sidebar using `with layout.sidebar()`. (Under the hood, this component tells Shiny Express that the parent page component is `ui.page_sidebar()`).
 - Notice that with the Express app used `express.layout.sidebar()`, instead of `ui.sidebar()`. These are not quite the same thing -- the function in `express.layout` is actually a special wrapper for the function in `ui`, which can be used as a context manager.
 
@@ -145,22 +147,22 @@ With Shiny Express, our hope is to introduce a gentler simplicity/power tradeoff
 
 ## Caveats
 
-While we believe that Shiny Express will turn out to be an effective tool for those new to Shiny, it is not appropriate for all use cases. A recurring theme you will find in the finer points below is that Shiny Express is easier to write but harder to manipulate and reason about, while traditional Shiny apps demand more up-front learning and some small inconveniences in return for being easier to read and reason about as your apps get larger.
+While we believe that Shiny Express will turn out to be an effective tool for those new to Shiny, it is not appropriate for all use cases. A recurring theme you will find in the finer points below is that Shiny Express is easier to write but harder to manipulate and reason about, while structured Shiny apps demand more up-front learning in return for being easier to read and reason about as your apps get larger.
 
-We also want to acknowledge the inherent risk of introducing a second (or depending on how you count, also a third and fourth!) way of writing Shiny apps. One risk is that Shiny Express will lead users into a learning cul-de-sac that is then harder to grow out of than if they had just learned Shiny in the first place--as we see Streamlit users cling to it long after they have left the domain where Streamlit works well. Another risk is that having two ways of doing things is just going to be confusing (see Panel, or on the mostly-positive side, Matplotlib).
+We also want to acknowledge the inherent risk of introducing a second way of writing Shiny apps. One risk is that Shiny Express will lead users into a learning cul-de-sac that is then harder to grow out of than if they had just learned Shiny in the first place--as we see Streamlit users cling to it long after they have left the domain where Streamlit works well. Another risk is that having two ways of doing things is just going to be confusing (see Panel, or on the mostly-positive side, Matplotlib).
 
 ## Differences between Express and bifuracted apps
 
-The main differences between Express apps and traditional Shiny apps are the following:
+The main differences between Express apps and structured apps are the following:
 
 - There is no separation between UI and server code. The UI and server code is mixed together.
-- In Shiny Express, UI components can be nested by writing `with layout.xx()`, where `layout.xx()` is a component that can contain other UI elements.
+- In Shiny Express, UI components can be nested using context managers `with layout.xx()`, where `layout.xx()` is a component that can contain other UI elements.
 - Shiny Express apps must contain `from shiny.express import ...`, `import shiny.express`, or `from shiny import express`. The presence of any of these statements tells Shiny that the app should be run in Express mode.
 
 
 ### No separation between UI and server code
 
-Traditional Shiny apps require that  UI and server logic be declared separately, with the UI containing `ui.output_xxx` objects to indicate _where_ each output goes and the server containing the logic indicating _what_ each output is.
+Structured Shiny apps require that  UI and server logic be declared separately, with the UI containing `ui.output_xxx` objects to indicate _where_ each output goes and the server containing the logic indicating _what_ each output is.
 
 ```{shinylive-python}
 #| standalone: true
@@ -187,7 +189,7 @@ def server(input, output, session):
 app = App(app_ui, server)
 ```
 
-In Shiny Express, the top level of the Python file can contain both UI expressions and server declarations, in any order. By default, declaring a render function causes it to appear right in that spot.
+In Shiny Express, the top level of the Python file can contain both UI expressions and server declarations in any order. By default, declaring a render function causes it to appear right in that spot.
 
 ```{shinylive-python}
 #| standalone: true
@@ -227,7 +229,7 @@ Notice how `greeting` in this app does _not_ have a corresponding call to `outpu
 
 We'll use the term _layout components_ to refer to components that contain other components as children. For example, a sidebar is a layout component because it contains other components, whereas a `input_text()` is not a layout component because it has no children.
 
-In Shiny, all layout components are available from the `ui` submodule, for example, `ui.sidebar()`, and `ui.input_text()`. You might create a simple app UI like this:
+In structured Shiny apps, all layout components are available from the `ui` submodule, for example, `ui.sidebar()`, and `ui.input_text()`. You might create a simple app UI like this:
 
 ```{shinylive-python}
 #| standalone: true
@@ -258,8 +260,8 @@ app = App(app_ui, server)
 
 In Express apps, there are the following differences:
 
-- There's no need to call `page_sidebar()` -- simply using `ui.sidebar()` tells Shiny to use `page_sidebar()`.
 - Instead of `ui.sidebar()`, you use `with layout.sidebar()`. You still call `layout.sidebar()` with the named arguments, like `fg` and `bg`. The unnamed arguments will be used as children to the `sidebar`.
+- There's no need to call `page_sidebar()` -- simply using `layout.sidebar()` tells Shiny to use `page_sidebar()`.
 - You can even put the server code inside of the `with` statement.
 
 ```{shinylive-python}
@@ -305,7 +307,7 @@ This can be useful in some cases, like if you're writing a function that returns
 
 ### Page-level containers
 
-In traditional Shiny apps, the UI always has a top-level `page_` container, like `page_fluid()`, `page_fillable()`, or `page_sidebar()`.
+In structured Shiny apps, the UI always has a top-level `page_` container, like `page_fluid()`, `page_fillable()`, or `page_sidebar()`.
 
 In an Express app, there is also a top-level `page_` container, but the user does not need to call the function explicitly.
 
